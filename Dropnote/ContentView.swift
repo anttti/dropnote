@@ -8,6 +8,7 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject var viewModel: NoteViewModel
     var onSettingsPressed: (() -> Void)?
+    var onDismiss: (() -> Void)?
     @State private var showDeleteConfirmation = false
     
     var body: some View {
@@ -46,7 +47,7 @@ struct ContentView: View {
                 Button(action: { showDeleteConfirmation = true }) {
                     Image(systemName: "trash")
                 }
-                .keyboardShortcut(.delete, modifiers: .command)
+                .keyboardShortcut(.delete, modifiers: [.command, .shift])
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -73,6 +74,11 @@ struct ContentView: View {
             }
         } message: {
             Text("Are you sure you want to delete this note? This action cannot be undone.")
+        }
+        .background {
+            Button("") { onDismiss?() }
+                .keyboardShortcut(.escape, modifiers: [])
+                .hidden()
         }
     }
 }

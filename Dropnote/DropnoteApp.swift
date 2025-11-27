@@ -78,6 +78,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let hostingView = NSHostingController(
             rootView: ContentView(viewModel: noteViewModel, onSettingsPressed: { [weak self] in
                 self?.openSettings()
+            }, onDismiss: { [weak self] in
+                self?.panel.orderOut(nil)
             })
         )
         panel.contentViewController = hostingView
