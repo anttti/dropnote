@@ -10,15 +10,18 @@ struct AppSettings: Codable {
     var hotkeyEnabled: Bool
     var hotkeyKeyCode: UInt32
     var hotkeyModifiers: UInt32
+    var launchAtStartup: Bool
     
     init(
         hotkeyEnabled: Bool = true,
         hotkeyKeyCode: UInt32 = 2, // 'd' key
-        hotkeyModifiers: UInt32 = UInt32(cmdKey | shiftKey)
+        hotkeyModifiers: UInt32 = UInt32(cmdKey | shiftKey),
+        launchAtStartup: Bool = false
     ) {
         self.hotkeyEnabled = hotkeyEnabled
         self.hotkeyKeyCode = hotkeyKeyCode
         self.hotkeyModifiers = hotkeyModifiers
+        self.launchAtStartup = launchAtStartup
     }
     
     var hotkeyDisplayString: String {

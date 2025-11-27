@@ -19,10 +19,19 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section {
+                Toggle("Launch at Startup", isOn: Binding(
+                    get: { LaunchAtStartupManager.isEnabled },
+                    set: { LaunchAtStartupManager.setEnabled($0) }
+                ))
+            } header: {
+                Text("General")
+            }
+            
+            Section {
                 Toggle("Enable global hotkey", isOn: $settingsManager.settings.hotkeyEnabled)
                 
                 HStack {
-                    Text("Shortcut:")
+                    Text("Global hotkey")
                     Spacer()
                     HotkeyRecorderView(keyCode: $keyCode, modifiers: $modifiers)
                         .frame(width: 120)
@@ -49,7 +58,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 350, height: 260)
+        .frame(width: 350, height: 350)
         .scrollDisabled(true)
     }
 }
