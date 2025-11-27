@@ -61,7 +61,7 @@ struct ContentView: View {
             ))
             .background(Color(NSColor.textBackgroundColor))
         }
-        .frame(width: 400, height: 400)
+        .frame(minWidth: 350, minHeight: 200)
         .alert("Delete Note", isPresented: $showDeleteConfirmation) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {

@@ -15,9 +15,14 @@ struct DropnoteApp: App {
     }
 }
 
+final class KeyablePanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
-    private var popover: NSPopover!
+    private var panel: KeyablePanel!
     private var noteViewModel = NoteViewModel()
     private var eventMonitor: Any?
     private var hotKeyRef: EventHotKeyRef?
@@ -26,9 +31,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settingsManager = SettingsManager.shared
     private let settingsWindowController = SettingsWindowController()
     
+    private var statusItemCenterX: CGFloat = 0
+    
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
-        setupPopover()
+        setupPanel()
         setupGlobalHotkey()
         setupEventMonitor()
         setupSettingsObserver()
@@ -44,22 +51,75 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-    private func setupPopover() {
-        popover = NSPopover()
-        popover.contentSize = NSSize(width: 400, height: 400)
-        popover.behavior = .transient
-        popover.contentViewController = NSHostingController(
+    private func setupPanel() {
+        panel = KeyablePanel(
+            contentRect: NSRect(x: 0, y: 0, width: 400, height: 400),
+            styleMask: [.resizable, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        panel.isFloatingPanel = true
+        panel.level = .floating
+        panel.isMovableByWindowBackground = false
+        panel.minSize = NSSize(width: 350, height: 200)
+        panel.hidesOnDeactivate = false
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        
+        let hostingView = NSHostingController(
             rootView: ContentView(viewModel: noteViewModel, onSettingsPressed: { [weak self] in
                 self?.openSettings()
             })
         )
+        panel.contentViewController = hostingView
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowWillResize(_:)),
+            name: NSWindow.willStartLiveResizeNotification,
+            object: panel
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowDidResize(_:)),
+            name: NSWindow.didResizeNotification,
+            object: panel
+        )
+    }
+    
+    @objc private func windowWillResize(_ notification: Notification) {
+        updateStatusItemCenterX()
+    }
+    
+    @objc private func windowDidResize(_ notification: Notification) {
+        guard panel.isVisible else { return }
+        centerPanelHorizontally()
+    }
+    
+    private func updateStatusItemCenterX() {
+        guard let button = statusItem.button,
+              let window = button.window else { return }
+        let buttonFrame = button.convert(button.bounds, to: nil)
+        let screenFrame = window.convertToScreen(buttonFrame)
+        statusItemCenterX = screenFrame.midX
+    }
+    
+    private func centerPanelHorizontally() {
+        var frame = panel.frame
+        frame.origin.x = statusItemCenterX - frame.width / 2
+        panel.setFrameOrigin(frame.origin)
     }
     
     private func setupEventMonitor() {
-        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            if let popover = self?.popover, popover.isShown {
-                popover.performClose(nil)
+        eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+            guard let self = self, self.panel.isVisible else { return }
+            // Don't close if clicking on the status item button
+            if let button = self.statusItem.button,
+               let buttonWindow = button.window {
+                let buttonFrame = button.convert(button.bounds, to: nil)
+                let screenFrame = buttonWindow.convertToScreen(buttonFrame)
+                if screenFrame.contains(event.locationInWindow) { return }
             }
+            self.panel.orderOut(nil)
         }
     }
     
@@ -112,18 +172,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc private func togglePopover() {
-        guard let button = statusItem.button else { return }
+        guard let button = statusItem.button,
+              let buttonWindow = button.window else { return }
         
-        if popover.isShown {
-            popover.performClose(nil)
+        if panel.isVisible {
+            panel.orderOut(nil)
         } else {
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            updateStatusItemCenterX()
+            
+            let buttonFrame = button.convert(button.bounds, to: nil)
+            let screenFrame = buttonWindow.convertToScreen(buttonFrame)
+            
+            let panelWidth = panel.frame.width
+            let panelHeight = panel.frame.height
+            let x = screenFrame.midX - panelWidth / 2
+            let y = screenFrame.minY - panelHeight - 4
+            
+            panel.setFrameOrigin(NSPoint(x: x, y: y))
+            panel.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
         }
     }
     
     func openSettings() {
-        popover.performClose(nil)
+        panel.orderOut(nil)
         settingsWindowController.showSettings()
     }
     
