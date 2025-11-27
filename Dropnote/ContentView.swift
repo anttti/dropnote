@@ -7,6 +7,7 @@ import SwiftUI
 
 struct ContentView: View {
     @ObservedObject var viewModel: NoteViewModel
+    var onSettingsPressed: (() -> Void)?
     @State private var showDeleteConfirmation = false
     @FocusState private var isEditorFocused: Bool
     
@@ -32,6 +33,11 @@ struct ContentView: View {
                     .frame(minWidth: 50)
                 
                 Spacer()
+                
+                Button(action: { onSettingsPressed?() }) {
+                    Image(systemName: "gear")
+                }
+                .keyboardShortcut(",", modifiers: .command)
                 
                 Button(action: viewModel.createNote) {
                     Image(systemName: "plus")

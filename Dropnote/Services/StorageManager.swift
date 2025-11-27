@@ -12,12 +12,14 @@ final class StorageManager {
     private let baseURL: URL
     private let notesURL: URL
     private let stateURL: URL
+    private let settingsURL: URL
     
     private init() {
         let home = fileManager.homeDirectoryForCurrentUser
         baseURL = home.appendingPathComponent(".config/dropnote/data")
         notesURL = baseURL.appendingPathComponent("notes")
         stateURL = baseURL.appendingPathComponent("state.json")
+        settingsURL = baseURL.appendingPathComponent("settings.json")
         
         createDirectoriesIfNeeded()
     }
@@ -69,6 +71,21 @@ final class StorageManager {
     
     func loadAllNotes(ids: [UUID]) -> [Note] {
         ids.compactMap { loadNote(id: $0) }
+    }
+    
+    // MARK: - Settings
+    
+    func loadSettings() -> AppSettings {
+        guard let data = try? Data(contentsOf: settingsURL),
+              let settings = try? JSONDecoder().decode(AppSettings.self, from: data) else {
+            return AppSettings()
+        }
+        return settings
+    }
+    
+    func saveSettings(_ settings: AppSettings) {
+        guard let data = try? JSONEncoder().encode(settings) else { return }
+        try? data.write(to: settingsURL, options: .atomic)
     }
 }
 
