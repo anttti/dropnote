@@ -52,7 +52,9 @@ struct ContentView: View {
             .padding(.vertical, 8)
             .background(Color(NSColor.windowBackgroundColor))
             
-            Divider()
+            Rectangle()
+                .fill(Color(NSColor.separatorColor))
+                .frame(height: 1)
             
             // Editor
             MarkdownTextView(text: Binding(
@@ -62,6 +64,8 @@ struct ContentView: View {
             .background(Color(NSColor.textBackgroundColor))
         }
         .frame(minWidth: 350, minHeight: 200)
+        .background(Color(NSColor.textBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
         .alert("Delete Note", isPresented: $showDeleteConfirmation) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {

@@ -72,6 +72,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.minSize = NSSize(width: 350, height: 200)
         panel.hidesOnDeactivate = false
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.backgroundColor = .clear
+        panel.isOpaque = false
         
         let hostingView = NSHostingController(
             rootView: ContentView(viewModel: noteViewModel, onSettingsPressed: { [weak self] in
@@ -80,6 +82,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         panel.contentViewController = hostingView
         panel.setContentSize(NSSize(width: width, height: height))
+        
+        hostingView.view.wantsLayer = true
+        hostingView.view.layer?.cornerRadius = 12
+        hostingView.view.layer?.masksToBounds = true
+        hostingView.view.layer?.backgroundColor = NSColor.textBackgroundColor.cgColor
         
         NotificationCenter.default.addObserver(
             self,
