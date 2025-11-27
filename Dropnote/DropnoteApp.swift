@@ -33,6 +33,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     
     private var statusItemCenterX: CGFloat = 0
     
+    private let panelWidthKey = "panelWidth"
+    private let panelHeightKey = "panelHeight"
+    
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
         setupPanel()
@@ -52,8 +55,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func setupPanel() {
+        let savedWidth = UserDefaults.standard.double(forKey: panelWidthKey)
+        let savedHeight = UserDefaults.standard.double(forKey: panelHeightKey)
+        let width = savedWidth > 0 ? savedWidth : 400
+        let height = savedHeight > 0 ? savedHeight : 400
+        
         panel = KeyablePanel(
-            contentRect: NSRect(x: 0, y: 0, width: 400, height: 400),
+            contentRect: NSRect(x: 0, y: 0, width: width, height: height),
             styleMask: [.resizable, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -71,6 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             })
         )
         panel.contentViewController = hostingView
+        panel.setContentSize(NSSize(width: width, height: height))
         
         NotificationCenter.default.addObserver(
             self,
@@ -93,6 +102,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func windowDidResize(_ notification: Notification) {
         guard panel.isVisible else { return }
         centerPanelHorizontally()
+        savePanelSize()
+    }
+    
+    private func savePanelSize() {
+        UserDefaults.standard.set(panel.frame.width, forKey: panelWidthKey)
+        UserDefaults.standard.set(panel.frame.height, forKey: panelHeightKey)
     }
     
     private func updateStatusItemCenterX() {
