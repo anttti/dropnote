@@ -79,7 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             rootView: ContentView(viewModel: noteViewModel, onSettingsPressed: { [weak self] in
                 self?.openSettings()
             }, onDismiss: { [weak self] in
-                self?.panel.orderOut(nil)
+                self?.dismissPanel()
             })
         )
         panel.contentViewController = hostingView
@@ -133,6 +133,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.setFrameOrigin(frame.origin)
     }
     
+    private func dismissPanel() {
+        guard panel.isVisible, let layer = panel.contentView?.layer else { return }
+        
+        let slideAnim = CABasicAnimation(keyPath: "transform.translation.y")
+        slideAnim.fromValue = 0
+        slideAnim.toValue = 20
+        slideAnim.duration = 0.05
+        slideAnim.timingFunction = CAMediaTimingFunction(name: .easeIn)
+        slideAnim.isRemovedOnCompletion = false
+        slideAnim.fillMode = .forwards
+        layer.add(slideAnim, forKey: "slideUp")
+        
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.05
+            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+            panel.animator().alphaValue = 0
+        }, completionHandler: { [weak self] in
+            self?.panel.orderOut(nil)
+            self?.panel.alphaValue = 1
+            layer.removeAllAnimations()
+        })
+    }
+    
     private func setupEventMonitor() {
         eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             guard let self = self, self.panel.isVisible else { return }
@@ -143,7 +166,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let screenFrame = buttonWindow.convertToScreen(buttonFrame)
                 if screenFrame.contains(event.locationInWindow) { return }
             }
-            self.panel.orderOut(nil)
+            self.dismissPanel()
         }
     }
     
@@ -200,7 +223,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
               let buttonWindow = button.window else { return }
         
         if panel.isVisible {
-            panel.orderOut(nil)
+            dismissPanel()
         } else {
             updateStatusItemCenterX()
             
@@ -219,7 +242,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func openSettings() {
-        panel.orderOut(nil)
+        dismissPanel()
         settingsWindowController.showSettings()
     }
     
