@@ -6,7 +6,8 @@ A minimal macOS menubar app for quick notes.
 
 - **Menubar-only** — Lives in your menubar, no Dock icon clutter
 - **Multi-note support** — Create, navigate, and delete notes
-- **Plain text** — No formatting, just text
+- **Markdown formatting** — Live syntax highlighting for headings, bold, italic, and clickable links
+- **Smart lists** — Auto-continues `- ` and `* ` list prefixes on Enter
 - **Persistent storage** — Notes saved to `~/.config/dropnote/data/`
 - **Configurable global hotkey** — Toggle from anywhere (default: `Cmd+Shift+D`)
 - **Settings window** — Customize hotkey via right-click menu
@@ -20,7 +21,7 @@ A minimal macOS menubar app for quick notes.
 ```
 Dropnote/
 ├── DropnoteApp.swift              # App entry, menubar setup, global hotkey
-├── ContentView.swift              # Main UI: toolbar + text editor
+├── ContentView.swift              # Main UI: toolbar + Markdown editor
 ├── SettingsWindowController.swift # Settings window management
 ├── Models/
 │   ├── Note.swift                 # Note struct (id, content, timestamps)
@@ -29,10 +30,12 @@ Dropnote/
 │   └── NoteViewModel.swift        # Note CRUD, navigation, auto-save logic
 ├── Views/
 │   ├── SettingsView.swift         # Settings UI (hotkey config)
-│   └── HotkeyRecorderView.swift   # Custom hotkey capture field
+│   ├── HotkeyRecorderView.swift   # Custom hotkey capture field
+│   └── MarkdownTextView.swift     # NSTextView wrapper with list auto-continuation
 ├── Services/
 │   ├── StorageManager.swift       # File I/O for notes
-│   └── SettingsManager.swift      # User preferences persistence
+│   ├── SettingsManager.swift      # User preferences persistence
+│   └── MarkdownHighlighter.swift  # Regex-based syntax highlighting
 └── Info.plist                     # LSUIElement=true (menubar-only)
 ```
 
