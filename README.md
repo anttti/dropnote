@@ -8,7 +8,8 @@ A minimal macOS menubar app for quick notes.
 - **Multi-note support** — Create, navigate, and delete notes
 - **Plain text** — No formatting, just text
 - **Persistent storage** — Notes saved to `~/.config/dropnote/data/`
-- **Global hotkey** — `Cmd+Shift+D` to toggle from anywhere
+- **Configurable global hotkey** — Toggle from anywhere (default: `Cmd+Shift+D`)
+- **Settings window** — Customize hotkey via right-click menu
 - **Keyboard shortcuts**:
   - `Cmd+N` — New note
   - `Cmd+Delete` — Delete note
@@ -18,16 +19,21 @@ A minimal macOS menubar app for quick notes.
 
 ```
 Dropnote/
-├── DropnoteApp.swift        # App entry point, menubar setup, global hotkey
-├── ContentView.swift        # Main UI: toolbar + text editor
+├── DropnoteApp.swift              # App entry, menubar setup, global hotkey
+├── ContentView.swift              # Main UI: toolbar + text editor
+├── SettingsWindowController.swift # Settings window management
 ├── Models/
-│   ├── Note.swift           # Note struct (id, content, timestamps)
-│   └── AppState.swift       # Persisted state (note order, current index)
+│   ├── Note.swift                 # Note struct (id, content, timestamps)
+│   └── AppState.swift             # Persisted state (note order, current index)
 ├── ViewModels/
-│   └── NoteViewModel.swift  # Note CRUD, navigation, auto-save logic
+│   └── NoteViewModel.swift        # Note CRUD, navigation, auto-save logic
+├── Views/
+│   ├── SettingsView.swift         # Settings UI (hotkey config)
+│   └── HotkeyRecorderView.swift   # Custom hotkey capture field
 ├── Services/
-│   └── StorageManager.swift # File I/O for ~/.config/dropnote/data/
-└── Info.plist               # LSUIElement=true (menubar-only)
+│   ├── StorageManager.swift       # File I/O for notes
+│   └── SettingsManager.swift      # User preferences persistence
+└── Info.plist                     # LSUIElement=true (menubar-only)
 ```
 
 **Data flow:** `ContentView` ↔ `NoteViewModel` ↔ `StorageManager` ↔ filesystem

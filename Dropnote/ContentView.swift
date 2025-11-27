@@ -9,7 +9,6 @@ struct ContentView: View {
     @ObservedObject var viewModel: NoteViewModel
     var onSettingsPressed: (() -> Void)?
     @State private var showDeleteConfirmation = false
-    @FocusState private var isEditorFocused: Bool
     
     var body: some View {
         VStack(spacing: 0) {
@@ -56,19 +55,13 @@ struct ContentView: View {
             Divider()
             
             // Editor
-            TextEditor(text: Binding(
+            MarkdownTextView(text: Binding(
                 get: { viewModel.currentContent },
                 set: { viewModel.currentContent = $0 }
             ))
-            .font(.system(.body, design: .monospaced))
-            .scrollContentBackground(.hidden)
             .background(Color(NSColor.textBackgroundColor))
-            .focused($isEditorFocused)
         }
         .frame(width: 400, height: 400)
-        .onAppear {
-            isEditorFocused = true
-        }
         .alert("Delete Note", isPresented: $showDeleteConfirmation) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
