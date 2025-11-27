@@ -22,8 +22,16 @@ final class SettingsWindowController {
         let window = NSWindow(contentViewController: hostingController)
         window.title = "Dropnote Settings"
         window.styleMask = [.titled, .closable]
-        window.center()
         window.isReleasedWhenClosed = false
+        
+        // Position in center of visible screen area (below menubar)
+        if let screen = NSScreen.main {
+            let visibleFrame = screen.visibleFrame
+            let windowSize = window.frame.size
+            let x = visibleFrame.midX - windowSize.width / 2
+            let y = visibleFrame.midY - windowSize.height / 2
+            window.setFrameOrigin(NSPoint(x: x, y: y))
+        }
         
         self.window = window
         window.makeKeyAndOrderFront(nil)
