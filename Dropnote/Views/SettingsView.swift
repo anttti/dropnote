@@ -41,9 +41,16 @@ struct SettingsView: View {
                 Text("Use the global hotkey to show/hide Dropnote from anywhere.")
                     .foregroundColor(.secondary)
             }
+            
+            Section {
+                Button("Quit Dropnote") {
+                    NSApplication.shared.terminate(nil)
+                }
+            }
         }
         .formStyle(.grouped)
-        .frame(width: 350, height: 180)
+        .frame(width: 350, height: 260)
+        .scrollDisabled(true)
     }
 }
 
