@@ -18,11 +18,14 @@ struct MarkdownTextView: NSViewRepresentable {
         textView.delegate = context.coordinator
         textView.font = font
         textView.backgroundColor = NSColor.textBackgroundColor
-        textView.isRichText = false
+        textView.isRichText = true // Required for link attributes
         textView.allowsUndo = true
         textView.isAutomaticQuoteSubstitutionEnabled = false
         textView.isAutomaticDashSubstitutionEnabled = false
         textView.isAutomaticTextReplacementEnabled = false
+        textView.isAutomaticLinkDetectionEnabled = false // We handle links manually
+        textView.isEditable = true
+        textView.isSelectable = true
         
         // Layout config
         textView.autoresizingMask = [.width]
@@ -88,6 +91,14 @@ struct MarkdownTextView: NSViewRepresentable {
             if let textStorage = textView.textStorage {
                 MarkdownHighlighter.applyHighlighting(to: textStorage, baseFont: parent.font)
             }
+        }
+        
+        func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
+            if let url = link as? URL {
+                NSWorkspace.shared.open(url)
+                return true
+            }
+            return false
         }
     }
 }
