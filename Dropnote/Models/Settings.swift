@@ -6,22 +6,57 @@
 import Foundation
 import Carbon
 
-struct AppSettings: Codable {
+struct AppSettings {
     var hotkeyEnabled: Bool
     var hotkeyKeyCode: UInt32
     var hotkeyModifiers: UInt32
     var launchAtStartup: Bool
+    var dataDirectory: String? // nil = default (~/.config/dropnote/data)
     
     init(
         hotkeyEnabled: Bool = true,
         hotkeyKeyCode: UInt32 = 2, // 'd' key
         hotkeyModifiers: UInt32 = UInt32(cmdKey | shiftKey),
-        launchAtStartup: Bool = false
+        launchAtStartup: Bool = false,
+        dataDirectory: String? = nil
     ) {
         self.hotkeyEnabled = hotkeyEnabled
         self.hotkeyKeyCode = hotkeyKeyCode
         self.hotkeyModifiers = hotkeyModifiers
         self.launchAtStartup = launchAtStartup
+        self.dataDirectory = dataDirectory
+    }
+    
+    // MARK: - UserDefaults Keys
+    
+    enum Key: String {
+        case hotkeyEnabled
+        case hotkeyKeyCode
+        case hotkeyModifiers
+        case launchAtStartup
+        case dataDirectory
+    }
+    
+    // MARK: - UserDefaults Persistence
+    
+    static func load() -> AppSettings {
+        let defaults = UserDefaults.standard
+        return AppSettings(
+            hotkeyEnabled: defaults.object(forKey: Key.hotkeyEnabled.rawValue) as? Bool ?? true,
+            hotkeyKeyCode: UInt32(defaults.integer(forKey: Key.hotkeyKeyCode.rawValue) == 0 ? 2 : defaults.integer(forKey: Key.hotkeyKeyCode.rawValue)),
+            hotkeyModifiers: UInt32(defaults.integer(forKey: Key.hotkeyModifiers.rawValue) == 0 ? Int(cmdKey | shiftKey) : defaults.integer(forKey: Key.hotkeyModifiers.rawValue)),
+            launchAtStartup: defaults.bool(forKey: Key.launchAtStartup.rawValue),
+            dataDirectory: defaults.string(forKey: Key.dataDirectory.rawValue)
+        )
+    }
+    
+    func save() {
+        let defaults = UserDefaults.standard
+        defaults.set(hotkeyEnabled, forKey: Key.hotkeyEnabled.rawValue)
+        defaults.set(Int(hotkeyKeyCode), forKey: Key.hotkeyKeyCode.rawValue)
+        defaults.set(Int(hotkeyModifiers), forKey: Key.hotkeyModifiers.rawValue)
+        defaults.set(launchAtStartup, forKey: Key.launchAtStartup.rawValue)
+        defaults.set(dataDirectory, forKey: Key.dataDirectory.rawValue)
     }
     
     var hotkeyDisplayString: String {

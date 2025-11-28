@@ -8,24 +8,68 @@ import Foundation
 final class StorageManager {
     static let shared = StorageManager()
     
+    static var defaultDataDirectory: URL {
+        FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config/dropnote/data")
+    }
+    
     private let fileManager = FileManager.default
-    private let baseURL: URL
-    private let notesURL: URL
-    private let stateURL: URL
-    private let settingsURL: URL
+    private(set) var dataDirectory: URL
+    private var notesURL: URL
+    private var stateURL: URL
     
     private init() {
-        let home = fileManager.homeDirectoryForCurrentUser
-        baseURL = home.appendingPathComponent(".config/dropnote/data")
-        notesURL = baseURL.appendingPathComponent("notes")
-        stateURL = baseURL.appendingPathComponent("state.json")
-        settingsURL = baseURL.appendingPathComponent("settings.json")
+        let customPath = UserDefaults.standard.string(forKey: AppSettings.Key.dataDirectory.rawValue)
+        dataDirectory = customPath.map { URL(fileURLWithPath: $0) } ?? Self.defaultDataDirectory
+        notesURL = dataDirectory.appendingPathComponent("notes")
+        stateURL = dataDirectory.appendingPathComponent("state.json")
         
+        createDirectoriesIfNeeded()
+    }
+    
+    func reloadDataDirectory() {
+        let customPath = UserDefaults.standard.string(forKey: AppSettings.Key.dataDirectory.rawValue)
+        dataDirectory = customPath.map { URL(fileURLWithPath: $0) } ?? Self.defaultDataDirectory
+        notesURL = dataDirectory.appendingPathComponent("notes")
+        stateURL = dataDirectory.appendingPathComponent("state.json")
         createDirectoriesIfNeeded()
     }
     
     private func createDirectoriesIfNeeded() {
         try? fileManager.createDirectory(at: notesURL, withIntermediateDirectories: true)
+    }
+    
+    // MARK: - Migration
+    
+    func migrateData(from source: URL, to destination: URL) throws {
+        guard source != destination else { return }
+        
+        let sourceNotes = source.appendingPathComponent("notes")
+        let sourceState = source.appendingPathComponent("state.json")
+        let destNotes = destination.appendingPathComponent("notes")
+        let destState = destination.appendingPathComponent("state.json")
+        
+        // Create destination directories
+        try fileManager.createDirectory(at: destNotes, withIntermediateDirectories: true)
+        
+        // Copy notes
+        if fileManager.fileExists(atPath: sourceNotes.path) {
+            let noteFiles = try fileManager.contentsOfDirectory(at: sourceNotes, includingPropertiesForKeys: nil)
+            for file in noteFiles {
+                let destFile = destNotes.appendingPathComponent(file.lastPathComponent)
+                if fileManager.fileExists(atPath: destFile.path) {
+                    try fileManager.removeItem(at: destFile)
+                }
+                try fileManager.copyItem(at: file, to: destFile)
+            }
+        }
+        
+        // Copy state.json
+        if fileManager.fileExists(atPath: sourceState.path) {
+            if fileManager.fileExists(atPath: destState.path) {
+                try fileManager.removeItem(at: destState)
+            }
+            try fileManager.copyItem(at: sourceState, to: destState)
+        }
     }
     
     // MARK: - State
@@ -71,21 +115,6 @@ final class StorageManager {
     
     func loadAllNotes(ids: [UUID]) -> [Note] {
         ids.compactMap { loadNote(id: $0) }
-    }
-    
-    // MARK: - Settings
-    
-    func loadSettings() -> AppSettings {
-        guard let data = try? Data(contentsOf: settingsURL),
-              let settings = try? JSONDecoder().decode(AppSettings.self, from: data) else {
-            return AppSettings()
-        }
-        return settings
-    }
-    
-    func saveSettings(_ settings: AppSettings) {
-        guard let data = try? JSONEncoder().encode(settings) else { return }
-        try? data.write(to: settingsURL, options: .atomic)
     }
 }
 

@@ -34,6 +34,16 @@ final class NoteViewModel: ObservableObject {
     
     init() {
         load()
+        
+        // Reload notes when data directory changes
+        SettingsManager.shared.onDataDirectoryChanged = { [weak self] in
+            self?.reload()
+        }
+    }
+    
+    func reload() {
+        saveTimer?.invalidate()
+        load()
     }
     
     // MARK: - Persistence

@@ -92,20 +92,7 @@ struct AppSettingsTests {
         #expect(settings.hotkeyEnabled == true)
         #expect(settings.hotkeyKeyCode == 2) // 'd' key
         #expect(settings.launchAtStartup == false)
-    }
-    
-    @Test func settingsIsCodable() throws {
-        var settings = AppSettings()
-        settings.hotkeyEnabled = false
-        settings.launchAtStartup = true
-        
-        let encoded = try JSONEncoder().encode(settings)
-        let decoded = try JSONDecoder().decode(AppSettings.self, from: encoded)
-        
-        #expect(decoded.hotkeyEnabled == settings.hotkeyEnabled)
-        #expect(decoded.hotkeyKeyCode == settings.hotkeyKeyCode)
-        #expect(decoded.hotkeyModifiers == settings.hotkeyModifiers)
-        #expect(decoded.launchAtStartup == settings.launchAtStartup)
+        #expect(settings.dataDirectory == nil)
     }
     
     @Test func hotkeyDisplayStringShowsCorrectModifiers() {

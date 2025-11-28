@@ -17,13 +17,11 @@ final class TestableStorageManager {
     let baseURL: URL
     private let notesURL: URL
     private let stateURL: URL
-    private let settingsURL: URL
     
     init(testDirectory: URL) {
         baseURL = testDirectory
         notesURL = baseURL.appendingPathComponent("notes")
         stateURL = baseURL.appendingPathComponent("state.json")
-        settingsURL = baseURL.appendingPathComponent("settings.json")
         
         try? fileManager.createDirectory(at: notesURL, withIntermediateDirectories: true)
     }
@@ -64,19 +62,6 @@ final class TestableStorageManager {
     
     func loadAllNotes(ids: [UUID]) -> [Note] {
         ids.compactMap { loadNote(id: $0) }
-    }
-    
-    func loadSettings() -> AppSettings {
-        guard let data = try? Data(contentsOf: settingsURL),
-              let settings = try? JSONDecoder().decode(AppSettings.self, from: data) else {
-            return AppSettings()
-        }
-        return settings
-    }
-    
-    func saveSettings(_ settings: AppSettings) {
-        guard let data = try? JSONEncoder().encode(settings) else { return }
-        try? data.write(to: settingsURL, options: .atomic)
     }
     
     func cleanup() {
@@ -154,33 +139,6 @@ struct StorageManagerTests {
         
         #expect(state.noteIds.isEmpty)
         #expect(state.currentIndex == 0)
-    }
-    
-    @Test func saveAndLoadSettings() throws {
-        let storage = createTestStorage()
-        defer { storage.cleanup() }
-        
-        var settings = AppSettings()
-        settings.hotkeyEnabled = false
-        settings.launchAtStartup = true
-        settings.hotkeyKeyCode = 15
-        
-        storage.saveSettings(settings)
-        let loaded = storage.loadSettings()
-        
-        #expect(loaded.hotkeyEnabled == false)
-        #expect(loaded.launchAtStartup == true)
-        #expect(loaded.hotkeyKeyCode == 15)
-    }
-    
-    @Test func loadSettingsReturnsDefaultWhenMissing() {
-        let storage = createTestStorage()
-        defer { storage.cleanup() }
-        
-        let settings = storage.loadSettings()
-        
-        #expect(settings.hotkeyEnabled == true)
-        #expect(settings.launchAtStartup == false)
     }
     
     @Test func loadAllNotes() throws {
