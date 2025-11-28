@@ -91,9 +91,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.setContentSize(NSSize(width: width, height: height))
         
         hostingView.view.wantsLayer = true
-        hostingView.view.layer?.cornerRadius = 12
-        hostingView.view.layer?.masksToBounds = true
-        hostingView.view.layer?.backgroundColor = NSColor.textBackgroundColor.cgColor
         
         NotificationCenter.default.addObserver(
             self,
@@ -244,7 +241,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let panelWidth = panel.frame.width
             let panelHeight = panel.frame.height
             let x = screenFrame.midX - panelWidth / 2
-            let y = screenFrame.minY - panelHeight - 4
+            let y = screenFrame.minY - panelHeight - 10 + ContentView.caretHeight
             
             panel.setFrameOrigin(NSPoint(x: x, y: y))
             showPanel()
