@@ -143,61 +143,263 @@ struct AppSettingsTests {
     }
 }
 
-// MARK: - NoteViewModel Logic Tests
+// MARK: - Mock Storage for Testing
 
-struct NoteViewModelLogicTests {
-    @Test func noteCountTextFormatsCorrectly() {
-        // Simulate the logic without storage dependency
-        func formatNoteCount(isEmpty: Bool, index: Int, count: Int) -> String {
-            isEmpty ? "0 of 0" : "\(index + 1) of \(count)"
-        }
-        
-        #expect(formatNoteCount(isEmpty: true, index: 0, count: 0) == "0 of 0")
-        #expect(formatNoteCount(isEmpty: false, index: 0, count: 1) == "1 of 1")
-        #expect(formatNoteCount(isEmpty: false, index: 2, count: 5) == "3 of 5")
+final class MockStorage: StorageProviding {
+    var state = AppState()
+    var notes: [UUID: Note] = [:]
+    
+    // Track calls for verification
+    var saveStateCalls: [AppState] = []
+    var saveNoteCalls: [Note] = []
+    var deleteNoteCalls: [UUID] = []
+    
+    func loadState() -> AppState { state }
+    
+    func saveState(_ state: AppState) {
+        self.state = state
+        saveStateCalls.append(state)
     }
     
-    @Test func navigationGuardLogic() {
-        // Test canGoPrevious logic
-        func canGoPrevious(noteCount: Int, currentIndex: Int) -> Bool {
-            noteCount > 1 && currentIndex > 0
-        }
-        
-        #expect(canGoPrevious(noteCount: 0, currentIndex: 0) == false)
-        #expect(canGoPrevious(noteCount: 1, currentIndex: 0) == false)
-        #expect(canGoPrevious(noteCount: 2, currentIndex: 0) == false)
-        #expect(canGoPrevious(noteCount: 2, currentIndex: 1) == true)
-        #expect(canGoPrevious(noteCount: 5, currentIndex: 3) == true)
-        
-        // Test canGoNext logic
-        func canGoNext(noteCount: Int, currentIndex: Int) -> Bool {
-            noteCount > 1 && currentIndex < noteCount - 1
-        }
-        
-        #expect(canGoNext(noteCount: 0, currentIndex: 0) == false)
-        #expect(canGoNext(noteCount: 1, currentIndex: 0) == false)
-        #expect(canGoNext(noteCount: 2, currentIndex: 0) == true)
-        #expect(canGoNext(noteCount: 2, currentIndex: 1) == false)
-        #expect(canGoNext(noteCount: 5, currentIndex: 3) == true)
-        #expect(canGoNext(noteCount: 5, currentIndex: 4) == false)
+    func loadNote(id: UUID) -> Note? { notes[id] }
+    
+    func saveNote(_ note: Note) {
+        notes[note.id] = note
+        saveNoteCalls.append(note)
     }
     
-    @Test func deleteIndexAdjustmentLogic() {
-        // After deletion, currentIndex should be min(currentIndex, notes.count - 1)
-        func adjustedIndex(deletedAt: Int, remainingCount: Int) -> Int {
-            min(deletedAt, max(remainingCount - 1, 0))
+    func deleteNote(id: UUID) {
+        notes.removeValue(forKey: id)
+        deleteNoteCalls.append(id)
+    }
+    
+    func loadAllNotes(ids: [UUID]) -> [Note] {
+        ids.compactMap { notes[$0] }
+    }
+    
+    // Helper to seed data
+    func seed(notes: [Note], currentIndex: Int = 0) {
+        for note in notes {
+            self.notes[note.id] = note
         }
+        state = AppState(noteIds: notes.map(\.id), currentIndex: currentIndex)
+    }
+}
+
+// MARK: - NoteViewModel Tests
+
+struct NoteViewModelTests {
+    
+    @Test func initWithEmptyStorageCreatesOneNote() {
+        let storage = MockStorage()
+        let vm = NoteViewModel(storage: storage)
         
-        // Deleting last of 5 notes (index 4) → stay at 3
-        #expect(adjustedIndex(deletedAt: 4, remainingCount: 4) == 3)
+        #expect(vm.notes.count == 1)
+        #expect(vm.currentIndex == 0)
+        #expect(vm.currentNote != nil)
+        #expect(vm.noteCountText == "1 of 1")
+    }
+    
+    @Test func initLoadsExistingNotes() {
+        let storage = MockStorage()
+        let note1 = Note(content: "First")
+        let note2 = Note(content: "Second")
+        storage.seed(notes: [note1, note2], currentIndex: 1)
         
-        // Deleting middle (index 2 of 5) → stay at 2
-        #expect(adjustedIndex(deletedAt: 2, remainingCount: 4) == 2)
+        let vm = NoteViewModel(storage: storage)
         
-        // Deleting first (index 0) → stay at 0
-        #expect(adjustedIndex(deletedAt: 0, remainingCount: 4) == 0)
+        #expect(vm.notes.count == 2)
+        #expect(vm.currentIndex == 1)
+        #expect(vm.currentNote?.content == "Second")
+    }
+    
+    @Test func createNoteAppendsAndNavigates() {
+        let storage = MockStorage()
+        let vm = NoteViewModel(storage: storage)
+        let initialCount = vm.notes.count
         
-        // Deleting only note → 0
-        #expect(adjustedIndex(deletedAt: 0, remainingCount: 0) == 0)
+        vm.createNote()
+        
+        #expect(vm.notes.count == initialCount + 1)
+        #expect(vm.currentIndex == vm.notes.count - 1)
+        #expect(vm.currentNote?.content == "")
+    }
+    
+    @Test func deleteCurrentNoteRemovesIt() {
+        let storage = MockStorage()
+        let note1 = Note(content: "First")
+        let note2 = Note(content: "Second")
+        let note3 = Note(content: "Third")
+        storage.seed(notes: [note1, note2, note3], currentIndex: 1)
+        
+        let vm = NoteViewModel(storage: storage)
+        vm.deleteCurrentNote()
+        
+        #expect(vm.notes.count == 2)
+        #expect(storage.deleteNoteCalls.contains(note2.id))
+        #expect(!vm.notes.contains { $0.id == note2.id })
+    }
+    
+    @Test func deleteLastNoteCreatesNewEmptyNote() {
+        let storage = MockStorage()
+        let vm = NoteViewModel(storage: storage)
+        let originalId = vm.currentNote?.id
+        
+        vm.deleteCurrentNote()
+        
+        #expect(vm.notes.count == 1)
+        #expect(vm.currentNote?.id != originalId)
+        #expect(vm.currentNote?.content == "")
+    }
+    
+    @Test func deleteAtEndAdjustsIndex() {
+        let storage = MockStorage()
+        let note1 = Note(content: "First")
+        let note2 = Note(content: "Second")
+        storage.seed(notes: [note1, note2], currentIndex: 1)
+        
+        let vm = NoteViewModel(storage: storage)
+        vm.deleteCurrentNote()
+        
+        #expect(vm.currentIndex == 0)
+        #expect(vm.currentNote?.content == "First")
+    }
+    
+    @Test func goToNextIncrementsIndex() {
+        let storage = MockStorage()
+        let note1 = Note(content: "First")
+        let note2 = Note(content: "Second")
+        storage.seed(notes: [note1, note2], currentIndex: 0)
+        
+        let vm = NoteViewModel(storage: storage)
+        vm.goToNext()
+        
+        #expect(vm.currentIndex == 1)
+        #expect(vm.currentNote?.content == "Second")
+    }
+    
+    @Test func goToPreviousDecrementsIndex() {
+        let storage = MockStorage()
+        let note1 = Note(content: "First")
+        let note2 = Note(content: "Second")
+        storage.seed(notes: [note1, note2], currentIndex: 1)
+        
+        let vm = NoteViewModel(storage: storage)
+        vm.goToPrevious()
+        
+        #expect(vm.currentIndex == 0)
+        #expect(vm.currentNote?.content == "First")
+    }
+    
+    @Test func goToNextAtEndDoesNothing() {
+        let storage = MockStorage()
+        let note1 = Note(content: "First")
+        let note2 = Note(content: "Second")
+        storage.seed(notes: [note1, note2], currentIndex: 1)
+        
+        let vm = NoteViewModel(storage: storage)
+        vm.goToNext()
+        
+        #expect(vm.currentIndex == 1)
+    }
+    
+    @Test func goToPreviousAtStartDoesNothing() {
+        let storage = MockStorage()
+        let note1 = Note(content: "First")
+        let note2 = Note(content: "Second")
+        storage.seed(notes: [note1, note2], currentIndex: 0)
+        
+        let vm = NoteViewModel(storage: storage)
+        vm.goToPrevious()
+        
+        #expect(vm.currentIndex == 0)
+    }
+    
+    @Test func canGoPreviousIsFalseAtStart() {
+        let storage = MockStorage()
+        let note1 = Note(content: "First")
+        let note2 = Note(content: "Second")
+        storage.seed(notes: [note1, note2], currentIndex: 0)
+        
+        let vm = NoteViewModel(storage: storage)
+        
+        #expect(vm.canGoPrevious == false)
+        #expect(vm.canGoNext == true)
+    }
+    
+    @Test func canGoNextIsFalseAtEnd() {
+        let storage = MockStorage()
+        let note1 = Note(content: "First")
+        let note2 = Note(content: "Second")
+        storage.seed(notes: [note1, note2], currentIndex: 1)
+        
+        let vm = NoteViewModel(storage: storage)
+        
+        #expect(vm.canGoPrevious == true)
+        #expect(vm.canGoNext == false)
+    }
+    
+    @Test func navigationDisabledWithSingleNote() {
+        let storage = MockStorage()
+        let vm = NoteViewModel(storage: storage)
+        
+        #expect(vm.canGoPrevious == false)
+        #expect(vm.canGoNext == false)
+    }
+    
+    @Test func currentContentUpdatesNote() {
+        let storage = MockStorage()
+        let vm = NoteViewModel(storage: storage)
+        
+        vm.currentContent = "Updated content"
+        
+        #expect(vm.notes[0].content == "Updated content")
+    }
+    
+    @Test func noteCountTextFormats() {
+        let storage = MockStorage()
+        let note1 = Note(content: "First")
+        let note2 = Note(content: "Second")
+        let note3 = Note(content: "Third")
+        storage.seed(notes: [note1, note2, note3], currentIndex: 1)
+        
+        let vm = NoteViewModel(storage: storage)
+        
+        #expect(vm.noteCountText == "2 of 3")
+    }
+    
+    @Test func createNoteSavesToStorage() {
+        let storage = MockStorage()
+        let vm = NoteViewModel(storage: storage)
+        storage.saveStateCalls.removeAll()
+        storage.saveNoteCalls.removeAll()
+        
+        vm.createNote()
+        
+        #expect(storage.saveStateCalls.count >= 1)
+        #expect(storage.saveNoteCalls.count >= 1)
+    }
+    
+    @Test func indexClampsWhenNotesFailToLoad() {
+        let storage = MockStorage()
+        // State references notes that don't exist
+        storage.state = AppState(noteIds: [UUID(), UUID(), UUID()], currentIndex: 2)
+        
+        let vm = NoteViewModel(storage: storage)
+        
+        // Should create a fresh note since all failed to load
+        #expect(vm.notes.count == 1)
+        #expect(vm.currentIndex == 0)
+    }
+    
+    @Test func indexClampsToMaxWhenTooHigh() {
+        let storage = MockStorage()
+        let note1 = Note(content: "First")
+        let note2 = Note(content: "Second")
+        storage.seed(notes: [note1, note2], currentIndex: 99)
+        
+        let vm = NoteViewModel(storage: storage)
+        
+        #expect(vm.currentIndex == 1) // Clamped to max valid index
     }
 }

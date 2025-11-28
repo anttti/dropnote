@@ -5,7 +5,20 @@
 
 import Foundation
 
-final class StorageManager {
+// MARK: - Protocol for dependency injection
+
+protocol StorageProviding {
+    func loadState() -> AppState
+    func saveState(_ state: AppState)
+    func loadNote(id: UUID) -> Note?
+    func saveNote(_ note: Note)
+    func deleteNote(id: UUID)
+    func loadAllNotes(ids: [UUID]) -> [Note]
+}
+
+// MARK: - Implementation
+
+final class StorageManager: StorageProviding {
     static let shared = StorageManager()
     
     static var defaultDataDirectory: URL {
@@ -17,12 +30,17 @@ final class StorageManager {
     private var notesURL: URL
     private var stateURL: URL
     
-    private init() {
+    private convenience init() {
         let customPath = UserDefaults.standard.string(forKey: AppSettings.Key.dataDirectory.rawValue)
-        dataDirectory = customPath.map { URL(fileURLWithPath: $0) } ?? Self.defaultDataDirectory
+        let directory = customPath.map { URL(fileURLWithPath: $0) } ?? Self.defaultDataDirectory
+        self.init(dataDirectory: directory)
+    }
+    
+    /// Testable initializer that accepts a custom data directory
+    init(dataDirectory: URL) {
+        self.dataDirectory = dataDirectory
         notesURL = dataDirectory.appendingPathComponent("notes")
         stateURL = dataDirectory.appendingPathComponent("state.json")
-        
         createDirectoriesIfNeeded()
     }
     

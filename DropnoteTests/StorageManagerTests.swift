@@ -9,78 +9,22 @@ import Testing
 import Foundation
 @testable import Dropnote
 
-// MARK: - TestableStorageManager
-
-/// A testable version of StorageManager that uses a custom directory
-final class TestableStorageManager {
-    private let fileManager = FileManager.default
-    let baseURL: URL
-    private let notesURL: URL
-    private let stateURL: URL
-    
-    init(testDirectory: URL) {
-        baseURL = testDirectory
-        notesURL = baseURL.appendingPathComponent("notes")
-        stateURL = baseURL.appendingPathComponent("state.json")
-        
-        try? fileManager.createDirectory(at: notesURL, withIntermediateDirectories: true)
-    }
-    
-    func loadState() -> AppState {
-        guard let data = try? Data(contentsOf: stateURL),
-              let state = try? JSONDecoder().decode(AppState.self, from: data) else {
-            return AppState()
-        }
-        return state
-    }
-    
-    func saveState(_ state: AppState) {
-        guard let data = try? JSONEncoder().encode(state) else { return }
-        try? data.write(to: stateURL, options: .atomic)
-    }
-    
-    func loadNote(id: UUID) -> Note? {
-        let url = notesURL.appendingPathComponent("\(id.uuidString).txt")
-        guard let content = try? String(contentsOf: url, encoding: .utf8) else { return nil }
-        
-        let attrs = try? fileManager.attributesOfItem(atPath: url.path)
-        let createdAt = attrs?[.creationDate] as? Date ?? Date()
-        let updatedAt = attrs?[.modificationDate] as? Date ?? Date()
-        
-        return Note(id: id, content: content, createdAt: createdAt, updatedAt: updatedAt)
-    }
-    
-    func saveNote(_ note: Note) {
-        let url = notesURL.appendingPathComponent("\(note.id.uuidString).txt")
-        try? note.content.write(to: url, atomically: true, encoding: .utf8)
-    }
-    
-    func deleteNote(id: UUID) {
-        let url = notesURL.appendingPathComponent("\(id.uuidString).txt")
-        try? fileManager.removeItem(at: url)
-    }
-    
-    func loadAllNotes(ids: [UUID]) -> [Note] {
-        ids.compactMap { loadNote(id: $0) }
-    }
-    
-    func cleanup() {
-        try? fileManager.removeItem(at: baseURL)
-    }
-}
-
 // MARK: - Storage Tests
 
 struct StorageManagerTests {
-    private func createTestStorage() -> TestableStorageManager {
+    private func createTestStorage() -> (StorageManager, URL) {
         let tempDir = FileManager.default.temporaryDirectory
             .appendingPathComponent("dropnote-test-\(UUID().uuidString)")
-        return TestableStorageManager(testDirectory: tempDir)
+        return (StorageManager(dataDirectory: tempDir), tempDir)
+    }
+    
+    private func cleanup(_ url: URL) {
+        try? FileManager.default.removeItem(at: url)
     }
     
     @Test func saveAndLoadNote() throws {
-        let storage = createTestStorage()
-        defer { storage.cleanup() }
+        let (storage, tempDir) = createTestStorage()
+        defer { cleanup(tempDir) }
         
         let note = Note(content: "Test content 🚀")
         storage.saveNote(note)
@@ -93,16 +37,16 @@ struct StorageManagerTests {
     }
     
     @Test func loadNonExistentNoteReturnsNil() {
-        let storage = createTestStorage()
-        defer { storage.cleanup() }
+        let (storage, tempDir) = createTestStorage()
+        defer { cleanup(tempDir) }
         
         let loaded = storage.loadNote(id: UUID())
         #expect(loaded == nil)
     }
     
     @Test func deleteNote() throws {
-        let storage = createTestStorage()
-        defer { storage.cleanup() }
+        let (storage, tempDir) = createTestStorage()
+        defer { cleanup(tempDir) }
         
         let note = Note(content: "To be deleted")
         storage.saveNote(note)
@@ -118,8 +62,8 @@ struct StorageManagerTests {
     }
     
     @Test func saveAndLoadState() throws {
-        let storage = createTestStorage()
-        defer { storage.cleanup() }
+        let (storage, tempDir) = createTestStorage()
+        defer { cleanup(tempDir) }
         
         let ids = [UUID(), UUID(), UUID()]
         let state = AppState(noteIds: ids, currentIndex: 2, version: 1)
@@ -132,8 +76,8 @@ struct StorageManagerTests {
     }
     
     @Test func loadStateReturnsDefaultWhenMissing() {
-        let storage = createTestStorage()
-        defer { storage.cleanup() }
+        let (storage, tempDir) = createTestStorage()
+        defer { cleanup(tempDir) }
         
         let state = storage.loadState()
         
@@ -142,8 +86,8 @@ struct StorageManagerTests {
     }
     
     @Test func loadAllNotes() throws {
-        let storage = createTestStorage()
-        defer { storage.cleanup() }
+        let (storage, tempDir) = createTestStorage()
+        defer { cleanup(tempDir) }
         
         let note1 = Note(content: "First")
         let note2 = Note(content: "Second")
@@ -160,8 +104,8 @@ struct StorageManagerTests {
     }
     
     @Test func loadAllNotesFiltersOutMissing() throws {
-        let storage = createTestStorage()
-        defer { storage.cleanup() }
+        let (storage, tempDir) = createTestStorage()
+        defer { cleanup(tempDir) }
         
         let note1 = Note(content: "Exists")
         let missingId = UUID()
@@ -175,8 +119,8 @@ struct StorageManagerTests {
     }
     
     @Test func noteContentWithSpecialCharacters() throws {
-        let storage = createTestStorage()
-        defer { storage.cleanup() }
+        let (storage, tempDir) = createTestStorage()
+        defer { cleanup(tempDir) }
         
         let specialContent = """
         # Markdown Header
@@ -201,8 +145,8 @@ struct StorageManagerTests {
     }
     
     @Test func emptyNoteContent() throws {
-        let storage = createTestStorage()
-        defer { storage.cleanup() }
+        let (storage, tempDir) = createTestStorage()
+        defer { cleanup(tempDir) }
         
         let note = Note(content: "")
         storage.saveNote(note)
@@ -213,8 +157,8 @@ struct StorageManagerTests {
     }
     
     @Test func overwriteExistingNote() throws {
-        let storage = createTestStorage()
-        defer { storage.cleanup() }
+        let (storage, tempDir) = createTestStorage()
+        defer { cleanup(tempDir) }
         
         let id = UUID()
         var note = Note(id: id, content: "Original")
@@ -228,8 +172,8 @@ struct StorageManagerTests {
     }
     
     @Test func deleteNonExistentNoteDoesNotThrow() {
-        let storage = createTestStorage()
-        defer { storage.cleanup() }
+        let (storage, tempDir) = createTestStorage()
+        defer { cleanup(tempDir) }
         
         // Should not throw or crash
         storage.deleteNote(id: UUID())

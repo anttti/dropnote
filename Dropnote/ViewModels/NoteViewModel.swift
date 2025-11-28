@@ -10,18 +10,24 @@ final class NoteViewModel: ObservableObject {
     @Published var notes: [Note] = []
     @Published var currentIndex: Int = 0
     
-    private let storage = StorageManager.shared
+    private let storage: StorageProviding
     private var saveTimer: Timer?
     
+    private var isValidIndex: Bool { notes.indices.contains(currentIndex) }
+    
+    private var currentState: AppState {
+        AppState(noteIds: notes.map(\.id), currentIndex: currentIndex)
+    }
+    
     var currentNote: Note? {
-        guard currentIndex >= 0 && currentIndex < notes.count else { return nil }
+        guard isValidIndex else { return nil }
         return notes[currentIndex]
     }
     
     var currentContent: String {
         get { currentNote?.content ?? "" }
         set {
-            guard currentIndex >= 0 && currentIndex < notes.count else { return }
+            guard isValidIndex else { return }
             notes[currentIndex].content = newValue
             notes[currentIndex].updatedAt = Date()
             scheduleSave()
@@ -32,13 +38,18 @@ final class NoteViewModel: ObservableObject {
     var canGoNext: Bool { notes.count > 1 && currentIndex < notes.count - 1 }
     var noteCountText: String { notes.isEmpty ? "0 of 0" : "\(currentIndex + 1) of \(notes.count)" }
     
-    init() {
+    init(storage: StorageProviding = StorageManager.shared) {
+        self.storage = storage
         load()
         
         // Reload notes when data directory changes
         SettingsManager.shared.onDataDirectoryChanged = { [weak self] in
             self?.reload()
         }
+    }
+    
+    deinit {
+        saveTimer?.invalidate()
     }
     
     func reload() {
@@ -71,13 +82,7 @@ final class NoteViewModel: ObservableObject {
     }
     
     private func save() {
-        let state = AppState(
-            noteIds: notes.map(\.id),
-            currentIndex: currentIndex
-        )
-        storage.saveState(state)
-        
-        // Save current note
+        storage.saveState(currentState)
         if let note = currentNote {
             storage.saveNote(note)
         }
@@ -96,14 +101,14 @@ final class NoteViewModel: ObservableObject {
         guard canGoPrevious else { return }
         save()
         currentIndex -= 1
-        storage.saveState(AppState(noteIds: notes.map(\.id), currentIndex: currentIndex))
+        storage.saveState(currentState)
     }
     
     func goToNext() {
         guard canGoNext else { return }
         save()
         currentIndex += 1
-        storage.saveState(AppState(noteIds: notes.map(\.id), currentIndex: currentIndex))
+        storage.saveState(currentState)
     }
     
     // MARK: - CRUD
