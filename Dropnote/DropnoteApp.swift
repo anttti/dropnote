@@ -164,7 +164,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                let buttonWindow = button.window {
                 let buttonFrame = button.convert(button.bounds, to: nil)
                 let screenFrame = buttonWindow.convertToScreen(buttonFrame)
-                if screenFrame.contains(event.locationInWindow) { return }
+                if screenFrame.contains(NSEvent.mouseLocation) { return }
             }
             self.dismissPanel()
         }
