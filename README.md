@@ -54,3 +54,18 @@ Dropnote/
 
 Open `Dropnote.xcodeproj` in Xcode and run.
 
+## Testing
+
+```bash
+# Run all tests
+xcodebuild test -scheme Dropnote -destination 'platform=macOS'
+
+# Unit tests only
+xcodebuild test -scheme Dropnote -destination 'platform=macOS' -only-testing:DropnoteTests
+
+# UI tests only
+xcodebuild test -scheme Dropnote -destination 'platform=macOS' -only-testing:DropnoteUITests
+```
+
+Or use `Cmd+U` in Xcode.
+
