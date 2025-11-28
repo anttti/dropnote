@@ -20,6 +20,11 @@ final class KeyablePanel: NSPanel {
     override var canBecomeMain: Bool { true }
 }
 
+private enum PanelAnimation {
+    static let duration: CFTimeInterval = 0.05
+    static let slideOffset: CGFloat = 20
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var panel: KeyablePanel!
@@ -138,15 +143,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         
         let slideAnim = CABasicAnimation(keyPath: "transform.translation.y")
         slideAnim.fromValue = 0
-        slideAnim.toValue = 20
-        slideAnim.duration = 0.05
+        slideAnim.toValue = PanelAnimation.slideOffset
+        slideAnim.duration = PanelAnimation.duration
         slideAnim.timingFunction = CAMediaTimingFunction(name: .easeIn)
         slideAnim.isRemovedOnCompletion = false
         slideAnim.fillMode = .forwards
         layer.add(slideAnim, forKey: "slideUp")
         
         NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.05
+            context.duration = PanelAnimation.duration
             context.timingFunction = CAMediaTimingFunction(name: .easeIn)
             panel.animator().alphaValue = 0
         }, completionHandler: { [weak self] in
@@ -248,20 +253,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         
         panel.alphaValue = 0
-        layer.transform = CATransform3DMakeTranslation(0, 20, 0)
+        layer.transform = CATransform3DMakeTranslation(0, PanelAnimation.slideOffset, 0)
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         
         let slideAnim = CABasicAnimation(keyPath: "transform.translation.y")
-        slideAnim.fromValue = 20
+        slideAnim.fromValue = PanelAnimation.slideOffset
         slideAnim.toValue = 0
-        slideAnim.duration = 0.05
+        slideAnim.duration = PanelAnimation.duration
         slideAnim.timingFunction = CAMediaTimingFunction(name: .easeOut)
         layer.add(slideAnim, forKey: "slideDown")
         layer.transform = CATransform3DIdentity
         
         NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.05
+            context.duration = PanelAnimation.duration
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
             panel.animator().alphaValue = 1
         })
