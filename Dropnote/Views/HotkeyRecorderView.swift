@@ -47,6 +47,12 @@ final class HotkeyRecorderNSView: NSView {
         setup()
     }
     
+    deinit {
+        if let monitor = monitor {
+            NSEvent.removeMonitor(monitor)
+        }
+    }
+    
     private func setup() {
         textField.isEditable = false
         textField.isBordered = true
