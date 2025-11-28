@@ -81,7 +81,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.isOpaque = false
         
         let hostingView = NSHostingController(
-            rootView: ContentView(viewModel: noteViewModel, onSettingsPressed: { [weak self] in
+            rootView: ContentView(viewModel: noteViewModel, settingsManager: settingsManager, onSettingsPressed: { [weak self] in
                 self?.openSettings()
             }, onDismiss: { [weak self] in
                 self?.dismissPanel()
@@ -164,6 +164,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupEventMonitor() {
         eventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             guard let self = self, self.panel.isVisible else { return }
+            // Don't close if pinned
+            if self.settingsManager.settings.isPinned { return }
             // Don't close if clicking on the status item button
             if let button = self.statusItem.button,
                let buttonWindow = button.window {
@@ -228,6 +230,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
               let buttonWindow = button.window else { return }
         
         if panel.isVisible {
+            // Reset pin state when manually dismissing via menu bar
+            if settingsManager.settings.isPinned {
+                settingsManager.updateIsPinned(false)
+            }
             dismissPanel()
         } else {
             updateStatusItemCenterX()

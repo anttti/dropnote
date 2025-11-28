@@ -7,6 +7,7 @@ import SwiftUI
 
 struct ContentView: View {
     @ObservedObject var viewModel: NoteViewModel
+    @ObservedObject var settingsManager: SettingsManager
     var onSettingsPressed: (() -> Void)?
     var onDismiss: (() -> Void)?
     @State private var showDeleteConfirmation = false
@@ -33,6 +34,11 @@ struct ContentView: View {
                     .frame(minWidth: 50)
                 
                 Spacer()
+                
+                Button(action: { settingsManager.updateIsPinned(!settingsManager.settings.isPinned) }) {
+                    Image(systemName: settingsManager.settings.isPinned ? "pin.fill" : "pin.slash")
+                }
+                .help(settingsManager.settings.isPinned ? "Unpin window" : "Pin window")
                 
                 Button(action: { onSettingsPressed?() }) {
                     Image(systemName: "gear")
@@ -84,5 +90,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView(viewModel: NoteViewModel())
+    ContentView(viewModel: NoteViewModel(), settingsManager: .shared)
 }

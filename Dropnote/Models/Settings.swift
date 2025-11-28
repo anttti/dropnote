@@ -12,19 +12,22 @@ struct AppSettings {
     var hotkeyModifiers: UInt32
     var launchAtStartup: Bool
     var dataDirectory: String? // nil = default (~/.config/dropnote/data)
+    var isPinned: Bool
     
     init(
         hotkeyEnabled: Bool = true,
         hotkeyKeyCode: UInt32 = 2, // 'd' key
         hotkeyModifiers: UInt32 = UInt32(cmdKey | shiftKey),
         launchAtStartup: Bool = false,
-        dataDirectory: String? = nil
+        dataDirectory: String? = nil,
+        isPinned: Bool = false
     ) {
         self.hotkeyEnabled = hotkeyEnabled
         self.hotkeyKeyCode = hotkeyKeyCode
         self.hotkeyModifiers = hotkeyModifiers
         self.launchAtStartup = launchAtStartup
         self.dataDirectory = dataDirectory
+        self.isPinned = isPinned
     }
     
     // MARK: - UserDefaults Keys
@@ -35,6 +38,7 @@ struct AppSettings {
         case hotkeyModifiers
         case launchAtStartup
         case dataDirectory
+        case isPinned
     }
     
     // MARK: - UserDefaults Persistence
@@ -46,7 +50,8 @@ struct AppSettings {
             hotkeyKeyCode: UInt32(defaults.integer(forKey: Key.hotkeyKeyCode.rawValue) == 0 ? 2 : defaults.integer(forKey: Key.hotkeyKeyCode.rawValue)),
             hotkeyModifiers: UInt32(defaults.integer(forKey: Key.hotkeyModifiers.rawValue) == 0 ? Int(cmdKey | shiftKey) : defaults.integer(forKey: Key.hotkeyModifiers.rawValue)),
             launchAtStartup: defaults.bool(forKey: Key.launchAtStartup.rawValue),
-            dataDirectory: defaults.string(forKey: Key.dataDirectory.rawValue)
+            dataDirectory: defaults.string(forKey: Key.dataDirectory.rawValue),
+            isPinned: defaults.bool(forKey: Key.isPinned.rawValue)
         )
     }
     
@@ -57,6 +62,7 @@ struct AppSettings {
         defaults.set(Int(hotkeyModifiers), forKey: Key.hotkeyModifiers.rawValue)
         defaults.set(launchAtStartup, forKey: Key.launchAtStartup.rawValue)
         defaults.set(dataDirectory, forKey: Key.dataDirectory.rawValue)
+        defaults.set(isPinned, forKey: Key.isPinned.rawValue)
     }
     
     var hotkeyDisplayString: String {

@@ -27,6 +27,10 @@ final class SettingsManager: ObservableObject {
         settings.hotkeyEnabled = enabled
     }
     
+    func updateIsPinned(_ pinned: Bool) {
+        settings.isPinned = pinned
+    }
+    
     func updateHotkey(keyCode: UInt32, modifiers: UInt32) {
         settings.hotkeyKeyCode = keyCode
         settings.hotkeyModifiers = modifiers
