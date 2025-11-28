@@ -99,11 +99,9 @@ final class NoteViewModel: ObservableObject {
     // MARK: - CRUD
     
     func createNote() {
-        save()
         let note = Note()
         notes.append(note)
         currentIndex = notes.count - 1
-        storage.saveNote(note)
         save()
     }
     
