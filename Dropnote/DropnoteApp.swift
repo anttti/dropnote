@@ -236,9 +236,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let y = screenFrame.minY - panelHeight - 4
             
             panel.setFrameOrigin(NSPoint(x: x, y: y))
+            showPanel()
+        }
+    }
+    
+    private func showPanel() {
+        guard let layer = panel.contentView?.layer else {
             panel.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
+            return
         }
+        
+        panel.alphaValue = 0
+        layer.transform = CATransform3DMakeTranslation(0, 20, 0)
+        panel.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        
+        let slideAnim = CABasicAnimation(keyPath: "transform.translation.y")
+        slideAnim.fromValue = 20
+        slideAnim.toValue = 0
+        slideAnim.duration = 0.05
+        slideAnim.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        layer.add(slideAnim, forKey: "slideDown")
+        layer.transform = CATransform3DIdentity
+        
+        NSAnimationContext.runAnimationGroup({ context in
+            context.duration = 0.05
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            panel.animator().alphaValue = 1
+        })
     }
     
     func openSettings() {
