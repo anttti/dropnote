@@ -139,7 +139,7 @@ final class HotkeyRecorderNSView: NSView {
     
     func updateDisplay() {
         guard !isRecording else { return }
-        textField.stringValue = AppSettings(hotkeyKeyCode: keyCode, hotkeyModifiers: modifiers).hotkeyDisplayString
+        textField.stringValue = AppSettings.displayString(keyCode: keyCode, modifiers: modifiers)
         textField.textColor = .labelColor
     }
     
